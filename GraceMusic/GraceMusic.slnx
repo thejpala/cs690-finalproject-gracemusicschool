@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="GraceMusic.Core/GraceMusic.Core.csproj" />
+  <Project Path="GraceMusic.Infrastructure/GraceMusic.Infrastructure.csproj" />
+  <Project Path="GraceMusic.Tests/GraceMusic.Tests.csproj" />
+  <Project Path="GraceMusic.UI/GraceMusic.UI.csproj" />
+</Solution>
