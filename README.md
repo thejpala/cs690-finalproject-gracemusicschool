@@ -44,7 +44,7 @@ The application is structured using **Clean Architecture** principles to strictl
    ```
 
 ---
-## Documentation
+## 📚 Documentation
 [User Guide](https://github.com/thejpala/cs690-finalproject-gracemusicschool/wiki/User-Documentation-V1.0)
 [Developer Document](https://github.com/thejpala/cs690-finalproject-gracemusicschool/wiki/Development-Document-V1.0)
 [Deployment Document](https://github.com/thejpala/cs690-finalproject-gracemusicschool/wiki/Deployment-Document)
