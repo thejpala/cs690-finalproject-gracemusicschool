@@ -17,6 +17,13 @@ public class ConsoleUI
     private readonly FileRepository<Student> _studentRepo;
     private readonly FileRepository<Lesson> _lessonRepo;
     private readonly FileRepository<Enrollment> _enrollmentRepo;
+    private readonly FileRepository<Payment> _paymentRepo;
+    private readonly FileRepository<TeacherLeave> _leaveRepo;
+    private readonly FileRepository<MakeupRequest> _makeupRepo;
+
+    private readonly SchedulingService _schedulingService;
+    private readonly PaymentService _paymentService;
+    private readonly ScheduleReportingService _reportingService;
 
     public ConsoleUI()
     {
@@ -41,6 +48,22 @@ public class ConsoleUI
         _enrollmentRepo = new FileRepository<Enrollment>(FilePaths.Enrollments,
             line => { var p = CsvParser.Split(line); return new Enrollment(p[0], p[1], p[2], int.Parse(p[3])); },
             e => $"{e.Id},{e.StudentId},{e.Instrument},{e.Level}");
+        
+        _paymentRepo = new FileRepository<Payment>(FilePaths.Payments,
+            line => { var p = CsvParser.Split(line); return new Payment(p[0], p[1], decimal.Parse(p[2]), p[3], DateTime.Parse(p[4])); },
+            p => $"{p.Id},{p.StudentId},{p.Amount},{p.CoverageMonth},{p.PaymentDate:O}");
+
+        _leaveRepo = new FileRepository<TeacherLeave>(FilePaths.TeacherLeaves,
+            line => { var p = CsvParser.Split(line); return new TeacherLeave(p[0], p[1], DateTime.Parse(p[2]), p[3]); },
+            l => $"{l.Id},{l.TeacherId},{l.LeaveDate:O},{l.TimeSlot}");
+
+        _makeupRepo = new FileRepository<MakeupRequest>(FilePaths.MakeupRequests,
+            line => { var p = CsvParser.Split(line); return new MakeupRequest(p[0], p[1], p[2], DateTime.Parse(p[3])); },
+            m => $"{m.Id},{m.StudentId},{m.EnrollmentId},{m.TargetDate:O}");
+
+        _paymentService = new PaymentService(_paymentRepo, _enrollmentRepo);
+        _reportingService = new ScheduleReportingService(_lessonRepo, _leaveRepo, _makeupRepo, _teacherRepo, _studentRepo);
+        _schedulingService = new SchedulingService(_lessonRepo, _enrollmentRepo);
     }
 
     public void Run() 
@@ -56,13 +79,17 @@ public class ConsoleUI
                     .AddChoices(
                         "1. Lesson Scheduling & Management",
                         "2. Manage School Registry & Enrollments",
+                        "3. Student Payments Portal",
+                        "4. View Daily Master Schedule Summary",
                         "9. Exit Application"
                     ));
 
             switch (choice[0].ToString()) 
             {
-                case "1": new SchedulingScreen(_studentRepo, _teacherRepo, _roomRepo, _enrollmentRepo, _lessonRepo).Render(); break;
-                case "2": new RegistryScreen(_teacherRepo, _roomRepo, _instrumentRepo, _studentRepo, _enrollmentRepo).Render(); break;
+                case "1": new SchedulingScreen(_studentRepo, _teacherRepo, _roomRepo, _enrollmentRepo, _lessonRepo, _leaveRepo, _makeupRepo).Render(); break;
+                case "2": new RegistryScreen(_teacherRepo, _roomRepo, _instrumentRepo, _studentRepo, _enrollmentRepo, _paymentService).Render(); break;
+                case "3": new PaymentScreen(_paymentService, _studentRepo, _paymentRepo).Render(); break;
+                case "4": new MasterScheduleScreen(_reportingService, _schedulingService, _teacherRepo, _studentRepo, _roomRepo, _lessonRepo, _makeupRepo, _enrollmentRepo).Render(); break;
                 case "9": running = false; break;
             }
         }

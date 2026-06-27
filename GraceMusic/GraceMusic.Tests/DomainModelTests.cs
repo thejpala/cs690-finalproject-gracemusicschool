@@ -37,4 +37,43 @@ public class DomainModelTests
         Assert.Equal("Studio A", room.Name);
         Assert.Equal(2, room.Capacity);
     }
+    [Fact]
+    public void Payment_Constructor_ShouldAssignPropertiesCorrectly()
+    {
+        var date = DateTime.Today;
+        var payment = new Payment("PAY-1", "STU-1", 150.00m, "July", date);
+
+        Assert.Equal("PAY-1", payment.Id);
+        Assert.Equal(150.00m, payment.Amount);
+        Assert.Equal("July", payment.CoverageMonth);
+    }
+
+    [Fact]
+    public void TeacherLeave_Constructor_ShouldSetDefaultTimeSlotToALL()
+    {
+        var leave = new TeacherLeave("LV-1", "TCH-1", DateTime.Today);
+        Assert.Equal("ALL", leave.TimeSlot);
+    }
+
+    [Fact]
+    public void MakeupRequest_Constructor_ShouldAssignPropertiesCorrectly()
+    {
+        var date = DateTime.Today;
+        var makeup = new MakeupRequest("MKP-1", "STU-1", "ENR-1", date);
+
+        Assert.Equal("MKP-1", makeup.Id);
+        Assert.Equal("ENR-1", makeup.EnrollmentId);
+    }
+
+    [Fact]
+    public void ConflictAlert_Constructor_ShouldAssignPropertiesCorrectly()
+    {
+        // Arrange & Act
+        var alert = new ConflictAlert("TEST_TYPE", "Test Message", "REF-123");
+
+        // Assert
+        Assert.Equal("TEST_TYPE", alert.Type);
+        Assert.Equal("Test Message", alert.Message);
+        Assert.Equal("REF-123", alert.ReferenceId);
+    }
 }
