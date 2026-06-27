@@ -44,8 +44,6 @@ public class SchedulingService
         }
         return availableSlots;
     }
-
-    // NEW: Just checks the Teacher's schedule
     public List<string> GetTeacherOnlyAvailableSlots(Teacher teacher, DateTime date)
     {
         var availableSlots = new List<string>();
@@ -79,8 +77,6 @@ public class SchedulingService
         lessons.Add(lesson);
         _lessonRepository.SaveAll(lessons);
     }
-
-    // NEW: Removes a lesson
     public void CancelLesson(string lessonId)
     {
         var lessons = _lessonRepository.LoadAll();

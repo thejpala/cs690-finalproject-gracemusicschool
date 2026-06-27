@@ -3,7 +3,6 @@ using Spectre.Console;
 
 namespace GraceMusic.UI;
 
-// Custom exception to safely abort workflows
 public class UserCancelledException : Exception { }
 
 public static class UiRenderer
