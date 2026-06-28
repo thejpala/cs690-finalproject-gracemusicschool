@@ -1,6 +1,6 @@
-Releases: 
+## Releases: 
 
-### v1.0.1
+### v1.0.0
 
 Download the distribution archive (`.zip` file) that matches your computer's Operating System:
 
