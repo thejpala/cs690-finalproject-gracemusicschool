@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GraceMusic.Infrastructure;
 using GraceMusic.Core.Interfaces;
 using GraceMusic.Core.Models;
 using GraceMusic.Core.Services;
@@ -16,12 +17,16 @@ public class SchedulingScreen
     private readonly IRepository<Room> _rooms;
     private readonly IRepository<Enrollment> _enrollments;
     private readonly IRepository<Lesson> _lessons;
+    private readonly IRepository<TeacherLeave> _leaves;
+    private readonly IRepository<MakeupRequest> _makeups;
 
     public SchedulingScreen(
         IRepository<Student> s, IRepository<Teacher> t, IRepository<Room> r, 
-        IRepository<Enrollment> e, IRepository<Lesson> l)
+        IRepository<Enrollment> e, IRepository<Lesson> l,
+        IRepository<TeacherLeave> leaves, IRepository<MakeupRequest> makeups)
     {
         _students = s; _teachers = t; _rooms = r; _enrollments = e; _lessons = l;
+        _leaves = leaves; _makeups = makeups;
         _service = new SchedulingService(l, e);
     }
 
@@ -39,6 +44,8 @@ public class SchedulingScreen
                         "1. Book a Lesson (Smart Schedule)",
                         "2. Check Teacher Availability Slots",
                         "3. Cancel/Remove Scheduled Lesson",
+                        "4. Log Teacher Leave (Sick/Emergency)",
+                        "5. Log Student Makeup Request",                        
                         "9. Back to Main Menu"
                     ));
 
@@ -47,6 +54,8 @@ public class SchedulingScreen
                 case "1": BookLesson(); break;
                 case "2": CheckTeacherAvailability(); break;
                 case "3": CancelScheduledLesson(); break;
+                case "4": LogTeacherLeave(); break;
+                case "5": LogMakeupRequest(); break;
                 case "9": stay = false; break;
             }
         }
@@ -211,5 +220,93 @@ public class SchedulingScreen
             UiRenderer.PrintMessage("Operation cancelled. Returning to menu...");
             UiRenderer.WaitForInput();
         }
+    }
+    private void LogTeacherLeave()
+    {
+        try
+        {
+            var allTeachers = _teachers.LoadAll();
+            if (!allTeachers.Any()) { UiRenderer.PrintMessage("No teachers registered."); UiRenderer.WaitForInput(); return; }
+
+            var teacherChoices = allTeachers.ToList();
+            teacherChoices.Add(new Teacher { Id = "CANCEL", Name = "< Cancel / Go Back >" });
+
+            var teacher = AnsiConsole.Prompt(new SelectionPrompt<Teacher>()
+                .Title("Select a [blue]Teacher[/] logging leave:")
+                .UseConverter(t => t.Id == "CANCEL" ? t.Name : $"{t.Name} ({t.Specialty})")
+                .AddChoices(teacherChoices));
+                
+            if (teacher.Id == "CANCEL") throw new UserCancelledException();
+
+            string dateInput = UiRenderer.AskString("Enter Leave Date (MM/DD/YYYY)");
+            if (!DateTime.TryParse(dateInput, out DateTime leaveDate)) leaveDate = DateTime.Today;
+
+            var timeSlot = AnsiConsole.Prompt(new SelectionPrompt<string>()
+                .Title("Select scope of leave:")
+                .AddChoices("ALL DAY", "Specific Time Slot", "< Cancel / Go Back >"));
+                
+            if (timeSlot == "< Cancel / Go Back >") throw new UserCancelledException();
+
+            string finalSlot = "ALL";
+            if (timeSlot == "Specific Time Slot")
+            {
+                finalSlot = UiRenderer.AskString("Enter specific time slot (e.g., 16:00)");
+            }
+
+            var leaves = _leaves.LoadAll();
+            string newId = IdGenerator.Generate("LV", leaves.Count);
+            leaves.Add(new TeacherLeave(newId, teacher.Id, leaveDate, finalSlot));
+            _leaves.SaveAll(leaves);
+
+            UiRenderer.PrintMessage($"SUCCESS: Leave logged for {teacher.Name} on {leaveDate:d}. This will now flag on the Master Schedule.");
+            UiRenderer.WaitForInput();
+        }
+        catch (UserCancelledException) { }
+    }
+
+    private void LogMakeupRequest()
+    {
+        try
+        {
+            var allStudents = _students.LoadAll();
+            if (!allStudents.Any()) { UiRenderer.PrintMessage("No students registered."); UiRenderer.WaitForInput(); return; }
+
+            var studentChoices = allStudents.ToList();
+            studentChoices.Add(new Student { Id = "CANCEL", Name = "< Cancel / Go Back >" });
+
+            var student = AnsiConsole.Prompt(new SelectionPrompt<Student>()
+                .Title("Select a [green]Student[/] requesting makeup:")
+                .UseConverter(s => s.Id == "CANCEL" ? s.Name : $"{s.Id} - {s.Name}")
+                .AddChoices(studentChoices));
+                
+            if (student.Id == "CANCEL") throw new UserCancelledException();
+
+            var activeEnrollments = _enrollments.LoadAll().Where(e => e.StudentId == student.Id).ToList();
+            if (!activeEnrollments.Any())
+            {
+                UiRenderer.PrintMessage("ERROR: This student has no active enrollments.");
+                UiRenderer.WaitForInput(); return;
+            }
+            activeEnrollments.Add(new Enrollment { Id = "CANCEL", Instrument = "< Cancel / Go Back >" });
+
+            var enrollment = AnsiConsole.Prompt(new SelectionPrompt<Enrollment>()
+                .Title($"Select [fuchsia]Instrument[/] for makeup:")
+                .UseConverter(e => e.Id == "CANCEL" ? e.Instrument : $"{e.Instrument} (Level {e.Level})")
+                .AddChoices(activeEnrollments));
+                
+            if (enrollment.Id == "CANCEL") throw new UserCancelledException();
+
+            string dateInput = UiRenderer.AskString("Enter requested Target Date (MM/DD/YYYY)");
+            if (!DateTime.TryParse(dateInput, out DateTime targetDate)) targetDate = DateTime.Today;
+
+            var makeups = _makeups.LoadAll();
+            string newId = IdGenerator.Generate("MKP", makeups.Count);
+            makeups.Add(new MakeupRequest(newId, student.Id, enrollment.Id, targetDate));
+            _makeups.SaveAll(makeups);
+
+            UiRenderer.PrintMessage($"SUCCESS: Makeup request logged for {student.Name} on {targetDate:d}. This will prompt for assignment on the Master Schedule.");
+            UiRenderer.WaitForInput();
+        }
+        catch (UserCancelledException) { }
     }
 }

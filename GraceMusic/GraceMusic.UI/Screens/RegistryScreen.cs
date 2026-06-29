@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using GraceMusic.Core.Models;
 using GraceMusic.Core.Interfaces;
+using GraceMusic.Core.Services;
 using GraceMusic.Infrastructure;
 using Spectre.Console;
 
@@ -16,9 +17,11 @@ public class RegistryScreen
     private readonly IRepository<Student> _students;
     private readonly IRepository<Enrollment> _enrollments;
 
-    public RegistryScreen(IRepository<Teacher> t, IRepository<Room> r, IRepository<string> i, IRepository<Student> s, IRepository<Enrollment> e)
+    private readonly PaymentService _paymentService;
+
+    public RegistryScreen(IRepository<Teacher> t, IRepository<Room> r, IRepository<string> i, IRepository<Student> s, IRepository<Enrollment> e, PaymentService ps)
     {
-        _teachers = t; _rooms = r; _instruments = i; _students = s; _enrollments = e;
+        _teachers = t; _rooms = r; _instruments = i; _students = s; _enrollments = e; _paymentService = ps;
     }
 
     public void Render()
@@ -82,12 +85,17 @@ public class RegistryScreen
         {
             var data = _teachers.LoadAll();
             UiRenderer.DrawHeader("MANAGE TEACHERS");
-            foreach (var t in data) Console.WriteLine($"[{t.Id}] {t.Name,-15} | {t.Specialty,-10} | Hours: {t.BaseHours}");
-            Console.WriteLine();
 
-            var action = AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Action:").AddChoices("Add New Teacher", "Edit Weekly Hours", "Back"));
-
-            if (action == "Add New Teacher")
+            var action = AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Action:").AddChoices("View All Teachers","Add New Teacher", "Edit Weekly Hours", "Back"));
+            if (action == "View All Teachers")
+            {
+                var table = new Table().Border(TableBorder.Rounded).Title("[blue]Registered Teachers[/]");
+                table.AddColumns("ID", "Name", "Specialty", "Rate", "Base Hours");
+                foreach (var t in data) table.AddRow(t.Id, t.Name, t.Specialty, $"${t.HourlyRate:F2}", t.BaseHours);
+                AnsiConsole.Write(table);
+                UiRenderer.WaitForInput();
+            }
+            else if (action == "Add New Teacher")
             {
                 string n = UiRenderer.AskString("Teacher Name");
                 string s = PromptForInstrument();
@@ -130,10 +138,19 @@ public class RegistryScreen
         {
             var data = _rooms.LoadAll();
             UiRenderer.DrawHeader("MANAGE ROOMS");
-            foreach (var r in data) Console.WriteLine($"[{r.Id}] {r.Name,-15} | Cap: {r.Capacity}");
-            Console.WriteLine();
-
-            if (AnsiConsole.Confirm("Add new Room?"))
+        
+            var action = AnsiConsole.Prompt(new SelectionPrompt<string>()
+                .Title("Action:")
+                .AddChoices("View All Rooms", "Add New Room", "Back"));
+            if (action == "View All Rooms")
+            {
+                var table = new Table().Border(TableBorder.Rounded).Title("[yellow]Facility Rooms[/]");
+                table.AddColumns("ID", "Room Name", "Capacity");
+                foreach (var r in data) table.AddRow(r.Id, r.Name, r.Capacity.ToString());
+                AnsiConsole.Write(table);
+                UiRenderer.WaitForInput();
+            }
+            else if (action == "Add New Room")
             {
                 string n = UiRenderer.AskString("Room Name");
                 int c = UiRenderer.AskInt("Capacity");
@@ -147,14 +164,24 @@ public class RegistryScreen
 
     private void ManageInstruments()
     {
-        var data = _instruments.LoadAll();
-        UiRenderer.DrawHeader("MANAGE INSTRUMENTS");
-        foreach (var i in data) Console.WriteLine($"- {i}");
-        Console.WriteLine();
-
         try 
         {
-            if (AnsiConsole.Confirm("Add new Instrument?"))
+            var data = _instruments.LoadAll();
+            UiRenderer.DrawHeader("MANAGE INSTRUMENTS");
+
+            var action = AnsiConsole.Prompt(new SelectionPrompt<string>()
+                .Title("Action:")
+                .AddChoices("View All Instruments", "Add New Instrument", "Back"));
+
+            if (action == "View All Instruments")
+            {
+                var table = new Table().Border(TableBorder.Rounded).Title("[fuchsia]School Catalog[/]");
+                table.AddColumn("Instrument Name");
+                foreach (var i in data) table.AddRow(i);
+                AnsiConsole.Write(table);
+                UiRenderer.WaitForInput();
+            }
+            else if (action == "Add New Instrument")
             {
                 string n = UiRenderer.AskString("Instrument Name");
                 if (!string.IsNullOrWhiteSpace(n) && !data.Contains(n, StringComparer.OrdinalIgnoreCase)) 
@@ -168,72 +195,87 @@ public class RegistryScreen
 
     private void ManageStudents()
     {
-        try
+    try
+    {
+        var sData = _students.LoadAll();
+        var eData = _enrollments.LoadAll();
+        
+        UiRenderer.DrawHeader("STUDENTS & ENROLLMENTS");
+        
+        var action = AnsiConsole.Prompt(new SelectionPrompt<string>()
+            .Title("Action:")
+            .AddChoices("View Students & Status", "Add New Student", "Enroll Existing Student", "Back"));
+
+        if (action == "View Students & Status")
         {
-            var sData = _students.LoadAll();
-            var eData = _enrollments.LoadAll();
-            
-            UiRenderer.DrawHeader("STUDENTS & ENROLLMENTS");
+            string currentMonth = DateTime.Now.ToString("MMMM");
+            var table = new Table().Border(TableBorder.Rounded).Title($"[green]Student Roster & Billing ({currentMonth})[/]");
+            table.AddColumns("ID", "Name", "Active Enrollments", "Billing Status");
+
             foreach (var s in sData)
             {
-                Console.WriteLine($"[{s.Id}] {s.Name}");
-                var studentEnr = eData.Where(e => e.StudentId == s.Id).ToList();
-                if (!studentEnr.Any()) Console.WriteLine("   -> (No active enrollments)");
-                foreach (var e in studentEnr) Console.WriteLine($"   -> Enrolled: {e.Instrument} (Level {e.Level})");
-            }
-            Console.WriteLine();
-
-            var action = AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Action:").AddChoices("Add New Student", "Enroll Existing Student", "Back"));
-
-            if (action == "Add New Student")
-            {
-                string n = UiRenderer.AskString("Student Name");
-                string p = UiRenderer.AskString("Phone");
-                var newStudentId = IdGenerator.Generate("STU", sData.Count);
-                sData.Add(new Student(newStudentId, n, p));
-                _students.SaveAll(sData);
-
-                if (AnsiConsole.Confirm("Add initial Instrument Enrollment now?"))
-                {
-                    string inst = PromptForInstrument();
-                    int lvl = UiRenderer.AskInt("Starting Level", 1);
-                    eData.Add(new Enrollment(IdGenerator.Generate("ENR", eData.Count), newStudentId, inst, lvl));
-                    _enrollments.SaveAll(eData);
-                }
-                UiRenderer.PrintMessage("Student workflow complete.");
-                UiRenderer.WaitForInput();
-            }
-            else if (action == "Enroll Existing Student" && sData.Any())
-            {
-                var choices = sData.ToList();
-                choices.Add(new Student { Id = "CANCEL", Name = "< Cancel / Go Back >" });
-
-                var target = AnsiConsole.Prompt(new SelectionPrompt<Student>()
-                    .Title("Select Student:")
-                    .UseConverter(s => s.Id == "CANCEL" ? s.Name : $"{s.Id} - {s.Name}")
-                    .AddChoices(choices));
-                if (target.Id == "CANCEL") throw new UserCancelledException();
-
-                string inst = PromptForInstrument();
+                string status = _paymentService.GetStudentPaymentStatus(s.Id, currentMonth);
+                string color = status == "CURRENT" ? "green" : status == "OVERDUE" ? "red" : "grey";
                 
-                if (eData.Any(e => e.StudentId == target.Id && e.Instrument.Equals(inst, StringComparison.OrdinalIgnoreCase)))
-                {
-                    UiRenderer.PrintMessage($"ERROR: {target.Name} is already enrolled in {inst}.");
-                }
-                else
-                {
-                    int lvl = UiRenderer.AskInt("Starting Level", 1);
-                    eData.Add(new Enrollment(IdGenerator.Generate("ENR", eData.Count), target.Id, inst, lvl));
-                    _enrollments.SaveAll(eData);
-                    UiRenderer.PrintMessage("Enrollment added successfully.");
-                }
-                UiRenderer.WaitForInput();
+                var studentEnr = eData.Where(e => e.StudentId == s.Id).ToList();
+                string enrollmentsStr = studentEnr.Any() 
+                    ? string.Join(", ", studentEnr.Select(e => $"{e.Instrument} (Lvl {e.Level})"))
+                    : "[grey]None[/]";
+
+                table.AddRow(s.Id, s.Name, enrollmentsStr, $"[{color}]{status}[/]");
             }
-        }
-        catch (UserCancelledException)
-        {
-            UiRenderer.PrintMessage("Operation cancelled. No changes saved.");
+            AnsiConsole.Write(table);
             UiRenderer.WaitForInput();
         }
+        else if (action == "Add New Student")
+        {
+            string n = UiRenderer.AskString("Student Name");
+            string p = UiRenderer.AskString("Phone");
+            var newStudentId = IdGenerator.Generate("STU", sData.Count);
+            sData.Add(new Student(newStudentId, n, p));
+            _students.SaveAll(sData);
+
+            if (AnsiConsole.Confirm("Add initial Instrument Enrollment now?"))
+            {
+                string inst = PromptForInstrument();
+                int lvl = UiRenderer.AskInt("Starting Level", 1);
+                eData.Add(new Enrollment(IdGenerator.Generate("ENR", eData.Count), newStudentId, inst, lvl));
+                _enrollments.SaveAll(eData);
+            }
+            UiRenderer.PrintMessage("Student workflow complete.");
+            UiRenderer.WaitForInput();
+        }
+        else if (action == "Enroll Existing Student" && sData.Any())
+        {
+            var choices = sData.ToList();
+            choices.Add(new Student { Id = "CANCEL", Name = "< Cancel / Go Back >" });
+
+            var target = AnsiConsole.Prompt(new SelectionPrompt<Student>()
+                .Title("Select Student:")
+                .UseConverter(s => s.Id == "CANCEL" ? s.Name : $"{s.Id} - {s.Name}")
+                .AddChoices(choices));
+            if (target.Id == "CANCEL") throw new UserCancelledException();
+
+            string inst = PromptForInstrument();
+            
+            if (eData.Any(e => e.StudentId == target.Id && e.Instrument.Equals(inst, StringComparison.OrdinalIgnoreCase)))
+            {
+                UiRenderer.PrintMessage($"ERROR: {target.Name} is already enrolled in {inst}.");
+            }
+            else
+            {
+                int lvl = UiRenderer.AskInt("Starting Level", 1);
+                eData.Add(new Enrollment(IdGenerator.Generate("ENR", eData.Count), target.Id, inst, lvl));
+                _enrollments.SaveAll(eData);
+                UiRenderer.PrintMessage("Enrollment added successfully.");
+            }
+            UiRenderer.WaitForInput();
+        }
+    }
+    catch (UserCancelledException)
+    {
+        UiRenderer.PrintMessage("Operation cancelled. No changes saved.");
+        UiRenderer.WaitForInput();
+    }
     }
 }
