@@ -117,8 +117,46 @@ public class MasterScheduleScreen
 
                 if (action.StartsWith("1"))
                 {
-                    AnsiConsole.MarkupLine("[grey]System looking for available substitute...[/]");
-                    AnsiConsole.MarkupLine("[cyan]Substitute assigned![/]");
+                    // 1. Get the enrollment to know the required instrument
+                    var enrollment = _enrollmentRepo.LoadAll().FirstOrDefault(e => e.Id == lessonToFix.EnrollmentId);
+                    if (enrollment == null)
+                    {
+                        AnsiConsole.MarkupLine("[red]Error: Enrollment data missing. Cannot find substitute.[/]");
+                        continue;
+                    }
+
+                    // 2. Find teachers who teach this instrument, excluding the original teacher
+                    var qualifiedSubs = _teacherRepo.LoadAll()
+                        .Where(t => t.Specialty.Equals(enrollment.Instrument, StringComparison.OrdinalIgnoreCase) && 
+                                    t.Id != lessonToFix.TeacherId)
+                        .ToList();
+
+                    // 3. Filter out teachers who are already teaching a lesson at this exact Date and Time
+                    var busyTeacherIds = lessons
+                        .Where(l => l.LessonDate.Date == targetDate.Date && l.TimeSlot == lessonToFix.TimeSlot)
+                        .Select(l => l.TeacherId)
+                        .ToList();
+
+                    var availableSubs = qualifiedSubs.Where(t => !busyTeacherIds.Contains(t.Id)).ToList();
+
+                    if (!availableSubs.Any())
+                    {
+                        AnsiConsole.MarkupLine($"[red]No available {enrollment.Instrument} substitutes found for the {lessonToFix.TimeSlot} time slot.[/]");
+                        // We loop 'continue' here so the admin can just re-select Option 2 or 3 next time
+                        continue; 
+                    }
+
+                    // 4. Prompt the admin to pick one of the available substitutes
+                    var substitute = AnsiConsole.Prompt(new SelectionPrompt<Teacher>()
+                        .Title("Select Substitute Teacher:")
+                        .UseConverter(t => $"{t.Name} ({t.Specialty})")
+                        .AddChoices(availableSubs));
+
+                    // 5. Apply the fix and save
+                    lessonToFix.TeacherId = substitute.Id;
+                    _lessonRepo.SaveAll(lessons);
+                    
+                    AnsiConsole.MarkupLine($"[green]Success! Lesson reassigned to {substitute.Name} at the original time.[/]");
                 }
                 else if (action.StartsWith("2"))
                 {

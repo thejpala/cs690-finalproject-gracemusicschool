@@ -44,19 +44,40 @@ public class PaymentScreen
                 
             if (student.Id == "CANCEL") throw new UserCancelledException();
 
-            decimal expectedTuition = _paymentService.CalculateExpectedMonthlyTuition(student.Id);
-            UiRenderer.PrintMessage($"Expected Monthly Tuition for {student.Name}: ${expectedTuition:F2}");
-
+            // Ask for the month FIRST
             var monthChoices = new[] { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December", "< Cancel / Go Back >" };
-            string defaultMonth = DateTime.Now.ToString("MMMM");
-
             var coverageMonth = AnsiConsole.Prompt(new SelectionPrompt<string>()
                 .Title("Select Coverage Month:")
                 .AddChoices(monthChoices));
                 
             if (coverageMonth == "< Cancel / Go Back >") throw new UserCancelledException();
 
-            decimal amount = UiRenderer.AskDecimal($"Enter Payment Amount for {coverageMonth}");
+            // NEW: Calculate dynamic balances based on the selected month
+            decimal expectedTuition = _paymentService.CalculateExpectedMonthlyTuition(student.Id);
+            decimal amountDue = _paymentService.GetAmountDue(student.Id, coverageMonth);
+            decimal amountPaid = expectedTuition > 0 ? (expectedTuition - amountDue) : 0;
+
+            // Render a clean Account Summary Panel
+            AnsiConsole.WriteLine();
+            var panel = new Panel(
+                $"Expected Tuition: ${expectedTuition:F2}\n" +
+                $"Amount Paid:      ${amountPaid:F2}\n" +
+                $"[bold {(amountDue > 0 ? "red" : "green")}]Remaining Due:    ${amountDue:F2}[/]")
+                .Header($"[bold blue]{student.Name} - {coverageMonth} Account Summary[/]")
+                .Padding(1, 1, 1, 1)
+                .RoundedBorder();
+            AnsiConsole.Write(panel);
+
+            // Prevent accidental double-charges
+            if (amountDue == 0)
+            {
+                if (!AnsiConsole.Confirm("\n[green]This student is fully paid for this month.[/] Do you still want to log an overpayment/credit?"))
+                {
+                    return;
+                }
+            }
+
+            decimal amount = UiRenderer.AskDecimal($"\nEnter Payment Amount for {coverageMonth}");
             
             var payments = _paymentRepo.LoadAll();
             string newId = IdGenerator.Generate("PAY", payments.Count);

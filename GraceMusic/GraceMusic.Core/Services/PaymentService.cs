@@ -25,6 +25,19 @@ public class PaymentService
         return activeEnrollments * BaseTuitionPerEnrollment;
     }
 
+    // NEW: Calculates the exact remaining balance for a specific month
+    public decimal GetAmountDue(string studentId, string targetMonth)
+    {
+        var expectedAmount = CalculateExpectedMonthlyTuition(studentId);
+        
+        var amountPaid = _paymentRepo.LoadAll()
+            .Where(p => p.StudentId == studentId && p.CoverageMonth.Equals(targetMonth, StringComparison.OrdinalIgnoreCase))
+            .Sum(p => p.Amount);
+
+        // Prevents negative balances if they overpay
+        return expectedAmount - amountPaid > 0 ? expectedAmount - amountPaid : 0; 
+    }
+
     // Resolves FR-2.2: Dynamic Status resolution
     public string GetStudentPaymentStatus(string studentId, string targetMonth)
     {
