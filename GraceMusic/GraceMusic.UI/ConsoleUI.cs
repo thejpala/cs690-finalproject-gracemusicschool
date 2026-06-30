@@ -24,6 +24,7 @@ public class ConsoleUI
     private readonly SchedulingService _schedulingService;
     private readonly PaymentService _paymentService;
     private readonly ScheduleReportingService _reportingService;
+    private readonly ProgressionService _progressionService;
 
     public ConsoleUI()
     {
@@ -61,9 +62,18 @@ public class ConsoleUI
             line => { var p = CsvParser.Split(line); return new MakeupRequest(p[0], p[1], p[2], DateTime.Parse(p[3])); },
             m => $"{m.Id},{m.StudentId},{m.EnrollmentId},{m.TargetDate:O}");
 
+        _enrollmentRepo = new FileRepository<Enrollment>(FilePaths.Enrollments,
+            line => { 
+                var p = CsvParser.Split(line); 
+                bool isApp = p.Length > 4 && bool.TryParse(p[4], out bool b) ? b : false;
+                return new Enrollment(p[0], p[1], p[2], int.Parse(p[3]), isApp); 
+            },
+            e => $"{e.Id},{e.StudentId},{e.Instrument},{e.Level},{e.IsInstructorApproved}");
+
         _paymentService = new PaymentService(_paymentRepo, _enrollmentRepo);
         _reportingService = new ScheduleReportingService(_lessonRepo, _leaveRepo, _makeupRepo, _teacherRepo, _studentRepo);
         _schedulingService = new SchedulingService(_lessonRepo, _enrollmentRepo);
+        _progressionService = new ProgressionService(_enrollmentRepo);
     }
 
     public void Run() 
@@ -81,6 +91,7 @@ public class ConsoleUI
                         "2. Manage School Registry & Enrollments",
                         "3. Student Payments Portal",
                         "4. View Daily Master Schedule Summary",
+                        "5. Student Levels & Progression",
                         "9. Exit Application"
                     ));
 
@@ -90,6 +101,7 @@ public class ConsoleUI
                 case "2": new RegistryScreen(_teacherRepo, _roomRepo, _instrumentRepo, _studentRepo, _enrollmentRepo, _paymentService).Render(); break;
                 case "3": new PaymentScreen(_paymentService, _studentRepo, _paymentRepo).Render(); break;
                 case "4": new MasterScheduleScreen(_reportingService, _schedulingService, _teacherRepo, _studentRepo, _roomRepo, _lessonRepo, _makeupRepo, _enrollmentRepo).Render(); break;
+                case "5": new ProgressionScreen(_progressionService, _studentRepo, _enrollmentRepo).Render(); break;
                 case "9": running = false; break;
             }
         }

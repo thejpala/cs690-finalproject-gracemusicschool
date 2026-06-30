@@ -76,4 +76,18 @@ public class DomainModelTests
         Assert.Equal("Test Message", alert.Message);
         Assert.Equal("REF-123", alert.ReferenceId);
     }
+
+    [Fact]
+    public void Enrollment_Constructor_ShouldInitializeInstructorApprovedFlag()
+    {
+        // Arrange & Act
+        var enrollment = new Enrollment("ENR-1", "STU-1", "Guitar", 1, true);
+
+        // Assert
+        Assert.Equal("ENR-1", enrollment.Id);
+        Assert.Equal("STU-1", enrollment.StudentId);
+        Assert.Equal("Guitar", enrollment.Instrument);
+        Assert.Equal(1, enrollment.Level);
+        Assert.True(enrollment.IsInstructorApproved); // NEW PROPERTY TEST
+    }
 }

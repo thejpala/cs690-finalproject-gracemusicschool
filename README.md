@@ -66,6 +66,12 @@ The application is structured using **Clean Architecture** principles to strictl
 [User Guide v2.0.0](https://github.com/thejpala/cs690-finalproject-gracemusicschool/wiki/User-Documentation-V2.0)
 
 
+### Iteration 3
 
+[Developer Document v3.0.0](https://github.com/thejpala/cs690-finalproject-gracemusicschool/wiki/Development-Document-V3.0)
+
+[Deployment Document v3.0.0](https://github.com/thejpala/cs690-finalproject-gracemusicschool/wiki/Deployment-Document-V3.0)
+
+[User Guide v3.0.0](https://github.com/thejpala/cs690-finalproject-gracemusicschool/wiki/User-Documentation-V3.0)
 
    
