@@ -210,7 +210,8 @@ public class RegistryScreen
         {
             string currentMonth = DateTime.Now.ToString("MMMM");
             var table = new Table().Border(TableBorder.Rounded).Title($"[green]Student Roster & Billing ({currentMonth})[/]");
-            table.AddColumns("ID", "Name", "Active Enrollments", "Billing Status");
+            
+            table.AddColumns("ID", "Name", "Active Enrollments", "Billing Status", "Balance Due");
 
             foreach (var s in sData)
             {
@@ -222,7 +223,11 @@ public class RegistryScreen
                     ? string.Join(", ", studentEnr.Select(e => $"{e.Instrument} (Lvl {e.Level})"))
                     : "[grey]None[/]";
 
-                table.AddRow(s.Id, s.Name, enrollmentsStr, $"[{color}]{status}[/]");
+                // Fetch and display the exact dollar amount owed
+                decimal balanceDue = _paymentService.GetAmountDue(s.Id, currentMonth);
+                string balanceColor = balanceDue > 0 ? "red" : "green";
+
+                table.AddRow(s.Id, s.Name, enrollmentsStr, $"[{color}]{status}[/]", $"[{balanceColor}]${balanceDue:F2}[/]");
             }
             AnsiConsole.Write(table);
             UiRenderer.WaitForInput();
