@@ -1,6 +1,14 @@
 ## Releases: 
 
-### v2.0.0 (LATEST)
+### v3.0.0
+
+Download the distribution archive (`.zip` file) that matches your computer's Operating System:
+
+* **Windows**: [GraceMusic-windows-v3.0.0.zip](https://github.com/thejpala/cs690-finalproject-gracemusicschool/blob/main/GraceMusic/publish/GraceMusic-windows-v3.0.0.zip)
+* **macOS**: [GraceMusic-macos-v3.0.0.zip](https://github.com/thejpala/cs690-finalproject-gracemusicschool/blob/main/GraceMusic/publish/GraceMusic-macos-v3.0.0.zip)
+* **Linux**: [GraceMusic-linux-v3.0.0.zip](https://github.com/thejpala/cs690-finalproject-gracemusicschool/blob/main/GraceMusic/publish/GraceMusic-linux-v3.0.0.zip)
+
+### v2.0.0
 
 Download the distribution archive (`.zip` file) that matches your computer's Operating System:
 

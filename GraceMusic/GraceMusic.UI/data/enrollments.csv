@@ -1,4 +1,4 @@
-ENR-001,STU-001,Piano,1
-ENR-002,STU-001,Guitar,2
-ENR-003,STU-002,Violin,3
-ENR-004,STU-003,Guitar,1
+ENR-001,STU-001,Piano,2,True
+ENR-002,STU-001,Guitar,2,False
+ENR-003,STU-002,Violin,3,False
+ENR-004,STU-003,Guitar,1,False
