@@ -20,7 +20,7 @@ public class DomainModelTests
     public void Enrollment_Constructor_ShouldSetDefaultLevelToOne()
     {
         // Act
-        var enrollment = new Enrollment("ENR-1", "STU-1", "Guitar");
+        var enrollment = new Enrollment("ENR-1", "STU-1", "Guitar", 1, false);
 
         // Assert
         Assert.Equal(1, enrollment.Level);
