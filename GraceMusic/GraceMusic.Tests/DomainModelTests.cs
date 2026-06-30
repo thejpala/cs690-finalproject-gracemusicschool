@@ -90,4 +90,30 @@ public class DomainModelTests
         Assert.Equal(1, enrollment.Level);
         Assert.True(enrollment.IsInstructorApproved); // NEW PROPERTY TEST
     }
+
+    [Fact]
+    public void Lesson_Properties_ShouldAssignAndRetrieveCorrectly()
+    {
+        // Arrange
+        var testDate = new DateTime(2026, 7, 15);
+
+        // Act
+        var lesson = new Lesson 
+        { 
+            Id = "LSN-99", 
+            EnrollmentId = "ENR-1", 
+            TeacherId = "TCH-2", 
+            RoomId = "RM-3", 
+            LessonDate = testDate, 
+            TimeSlot = "14:00" 
+        };
+
+        // Assert
+        Assert.Equal("LSN-99", lesson.Id);
+        Assert.Equal("ENR-1", lesson.EnrollmentId);
+        Assert.Equal("TCH-2", lesson.TeacherId);
+        Assert.Equal("RM-3", lesson.RoomId);
+        Assert.Equal(testDate, lesson.LessonDate);
+        Assert.Equal("14:00", lesson.TimeSlot);
+    }
 }
